@@ -30,9 +30,6 @@
       - kafka-source
 ```
 
-# Data
-
-
 # Mirror maker
 ```yml
   mirror-maker:

@@ -57,4 +57,3 @@ services:
       - kafka-source
       - kafka-destination
       - zookeeper-destination
- 
