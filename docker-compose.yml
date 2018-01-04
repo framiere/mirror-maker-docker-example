@@ -1,0 +1,60 @@
+version: '2'
+services:
+  zookeeper-source:
+    image: confluentinc/cp-zookeeper:4.0.0
+    hostname: zookeeper-source
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka-source:
+    image: confluentinc/cp-kafka:4.0.0
+    hostname: kafka-source
+    depends_on:
+      - zookeeper-source
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper-source:2181'
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-source:9092      
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  zookeeper-destination:
+    image: confluentinc/cp-zookeeper:4.0.0
+    hostname: zookeeper-destination
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka-destination:
+    image: confluentinc/cp-kafka:4.0.0
+    hostname: kafka-destination
+    depends_on:
+      - zookeeper-destination
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper-destination:2181'
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-destination:9092      
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1            
+
+  topic-creation:
+    image: confluentinc/cp-kafka:4.0.0
+    command: bash -c "cub kafka-ready -z zookeeper-source:2181 1 30 && kafka-topics --zookeeper zookeeper-source:2181 --create --topic topic-to-mirror --partitions 10 --replication-factor 1"
+    depends_on:
+      - zookeeper-source
+
+  dummy-generation:
+    image: confluentinc/cp-kafka:4.0.0
+    command: bash -c "cub kafka-ready -z zookeeper-source:2181 1 30 && sleep 5 && seq 10000 | kafka-console-producer --broker-list kafka-source:9092 --topic topic-to-mirror"
+    depends_on:
+      - zookeeper-source
+      - kafka-source
+
+  mirror-maker:
+    image: confluentinc/cp-kafka:4.0.0
+    volumes:
+      - ./consumer.cfg:/etc/consumer.cfg
+      - ./producer.cfg:/etc/producer.cfg
+    command: bash -c "cub kafka-ready -z zookeeper-source:2181 1 30 && cub kafka-ready -z zookeeper-destination:2181 1 30 && kafka-mirror-maker --consumer.config /etc/consumer.cfg --producer.config /etc/producer.cfg --whitelist topic-to-mirror --num.streams 1"
+    depends_on:
+      - kafka-source
+      - kafka-destination
+      - zookeeper-destination
+ 
