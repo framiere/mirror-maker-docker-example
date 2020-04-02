@@ -85,5 +85,8 @@ $ docker-compose exec kafka-destination kafka-console-consumer --bootstrap-serve
 ```
 
 mirror-maker did replicate on the destination cluster
-
-
+for demonstrating purposes use 
+```
+docker-compose exec kafka-source kafka-console-producer --broker-list localhost:9092 --topic topic-to-mirror
+```
+and start typing
